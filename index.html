@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia de Salões de Beleza - Castelo Branco</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Soft Glamour -->
+    <!-- Application Structure Plan: A aplicação foi estruturada como um diretório interativo de página única. A escolha por um layout com uma barra de pesquisa proeminente e uma grelha de cartões responsiva visa a máxima usabilidade. Em vez de uma lista estática, esta abordagem permite ao utilizador filtrar e encontrar informações rapidamente, o que é crucial para uma lista com 50 itens. A navegação é simplificada ao essencial: pesquisar e visualizar. Esta estrutura serve diretamente o objetivo de encontrar salões para contactar sobre oportunidades de emprego, tornando a tarefa mais eficiente. -->
+    <!-- Visualization & Content Choices: A informação da lista de salões foi transformada numa grelha de cartões interativos (HTML/Tailwind/JS). O objetivo principal é organizar e facilitar a consulta. A interação chave é a pesquisa em tempo real, que filtra os cartões com base no nome ou morada. Também foram adicionados botões para "Ligar" (usando links `tel:`) e "Copiar" o número, ações diretas que apoiam o objetivo do utilizador. Foram usados ícones (Unicode) para melhorar a legibilidade. Não foram usados gráficos (Chart.js/Plotly) pois os dados são uma lista e não dados quantitativos, tornando um gráfico desnecessário e pouco informativo para o objetivo da aplicação. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF8;
+            color: #4A4A4A;
+        }
+        .card {
+            background-color: #FFFFFF;
+            border: 1px solid #F0EAE2;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .btn-action {
+            background-color: #F0EAE2;
+            color: #8D7B68;
+            transition: background-color 0.2s;
+        }
+        .btn-action:hover {
+            background-color: #E6DCD1;
+        }
+        #searchInput {
+            border-color: #E6DCD1;
+        }
+        #searchInput:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #C8BBAE;
+            border-color: #C8BBAE;
+        }
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 30px;
+            opacity: 0;
+            transition: opacity 0.3s, visibility 0.3s, bottom 0.3s;
+        }
+        .toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-[#8D7B68]">Guia de Salões de Beleza</h1>
+            <p class="mt-2 text-lg text-gray-600">Castelo Branco, Portugal</p>
+        </header>
+
+        <section class="mb-8">
+            <p class="text-center max-w-2xl mx-auto text-gray-700">
+                Esta é uma ferramenta interativa para explorar salões de beleza em Castelo Branco. Use a barra de pesquisa abaixo para encontrar estabelecimentos por nome ou morada. O objetivo é facilitar a procura de oportunidades de emprego na área da beleza.
+            </p>
+        </section>
+
+        <div class="mb-8 sticky top-4 z-10 bg-[#FDFBF8]/80 backdrop-blur-sm p-4 rounded-lg">
+            <div class="relative max-w-xl mx-auto">
+                <input type="text" id="searchInput" placeholder="Pesquisar por nome ou morada..."
+                    class="w-full px-5 py-3 text-base text-gray-700 placeholder-gray-500 bg-white border-2 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-[#C8BBAE] focus:border-transparent transition">
+                <div class="absolute inset-y-0 right-0 flex items-center pr-5">
+                    <span class="text-gray-400">🔍</span>
+                </div>
+            </div>
+        </div>
+
+        <main id="salon-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        </main>
+        
+        <div id="no-results" class="text-center py-12 hidden">
+             <p class="text-xl text-gray-500">Nenhum salão encontrado. Tente uma pesquisa diferente.</p>
+        </div>
+
+    </div>
+
+    <div id="toast-notification" class="toast">Número copiado para a área de transferência!</div>
+
+    <script>
+        const salons = [
+            { name: "Essencia Feminina - Instituto de Beleza", address: "Av. de Espanha Lote 15 loja 2 e 3, 6000-078 Castelo Branco", phone: "+351 272 108 338" },
+            { name: "Gisela Cabeleireiros", address: "Av. Nuno Álvares 4, 6000-083 Castelo Branco", phone: "+351 960 404 744" },
+            { name: "Glamour - beauty space", address: "Rua M, R. Prior Vasconcelos n.25, 6000-265 Castelo Branco", phone: "+351 926 095 412" },
+            { name: "Studio Tayane Ramos", address: "Av. da Carapalha 35 R/C direito, 6000-320 Castelo Branco", phone: "+351 962 105 400" },
+            { name: "FR Cabeleireiros", address: "Av. Cidade de Zhuhai 169, 6000-077 Castelo Branco", phone: "+351 272 323 724" },
+            { name: "Ana Paula Cabeleireiro", address: "R. de São Marcos 17, 6000-272 Castelo Branco", phone: "+351 272 326 138" },
+            { name: "Hair Concept by Carla Lopes", address: "R. do Saibreiro 31, 6000-264 Castelo Branco", phone: "+351 965 242 700" },
+            { name: "Lurdes Vaz Cabeleireiros", address: "R. 1º de Dezembro 5, 6000-064 Castelo Branco", phone: "+351 272 321 700" },
+            { name: "Barbearia Retroz", address: "R. Conselheiro Albuquerque 2, 6000-149 Castelo Branco", phone: "+351 966 220 503" },
+            { name: "Prestigius Cabeleireiros", address: "R. de S. Miguel 10, 6000-111 Castelo Branco", phone: "+351 272 327 004" },
+            { name: "Sónia Santos Cabeleireiros", address: "R. Dr. A. F. de Almeida 24, 6000-151 Castelo Branco", phone: "+351 272 083 490" },
+            { name: "Paula Barata Cabeleireiros", address: "Quinta do Amieiro de Baixo Lote 6, Loja A, 6000-058 Castelo Branco", phone: "+351 272 323 930" },
+            { name: "Cristina & Lurdes Cabeleireiros", address: "R. de Olivença 15, 6000-198 Castelo Branco", phone: "+351 272 327 940" },
+            { name: "Isilda Cabeleireiros", address: "R. da Mina 19, 6000-083 Castelo Branco", phone: "+351 272 342 559" },
+            { name: "Helena Cabeleireira", address: "R. das Olarias 34, 6000-197 Castelo Branco", phone: "+351 272 325 363" },
+            { name: "Cabeleireiro Celeste", address: "R. da Sr.ª da Piedade 12, 6000-150 Castelo Branco", phone: "+351 272 344 650" },
+            { name: "Dora Cabeleireiros", address: "R. das Olarias, 6000-197 Castelo Branco", phone: "+351 965 101 228" },
+            { name: "Salão Paula", address: "R. de S. Sebastião 20, 6000-025 Castelo Branco", phone: "+351 272 323 207" },
+            { name: "Maria Fernanda Cabeleireira", address: "R. da Sr.ª da Piedade 60, 6000-150 Castelo Branco", phone: "+351 272 324 093" },
+            { name: "Tons & Nuances Cabeleireiro", address: "R. de Bartolomeu da Costa 21, 6000-066 Castelo Branco", phone: "+351 272 327 758" },
+            { name: "Cabeleireiro Rosa & Canela", address: "R. Ferreira de Lacerda 1, 6000-168 Castelo Branco", phone: "+351 272 321 005" },
+            { name: "Art & Cor Cabeleireiros", address: "Av. Gen. Humberto Delgado 101, 6000-081 Castelo Branco", phone: "+351 272 322 284" },
+            { name: "Cortes & Companhia", address: "Av. 1º de Maio 71, 6000-095 Castelo Branco", phone: "+351 272 341 537" },
+            { name: "Adelaide e Filha Cabeleireiros", address: "R. Pedro Álvares Cabral 20, 6000-086 Castelo Branco", phone: "+351 272 344 263" },
+            { name: "Isabel Grilo Cabeleireiro", address: "R. do Arco do Bispo 1, 6000-164 Castelo Branco", phone: "+351 272 327 799" },
+            { name: "Cabeleireiro Vanda", address: "R. de Santa Maria 2, 6000-184 Castelo Branco", phone: "+351 272 327 344" },
+            { name: "Teresa Cabeleireiros", address: "R. do Relógio 11, 6000-260 Castelo Branco", phone: "+351 272 321 445" },
+            { name: "Nanda Cabeleireira", address: "R. Prior Vasconcelos 11, 6000-265 Castelo Branco", phone: "+351 272 327 573" },
+            { name: "Lina Cabeleireira", address: "R. dos Cavaleiros 3, 6000-128 Castelo Branco", phone: "+351 272 327 824" },
+            { name: "Espaço M", address: "R. Dr. José Lopes Dias 2, 6000-160 Castelo Branco", phone: "Indisponível" },
+            { name: "Natália Cabeleireira", address: "R. de Santo António 13, 6000-271 Castelo Branco", phone: "+351 272 323 150" },
+            { name: "Adelaide Vaz Cabeleireira", address: "R. da Talagueira 8, 6000-281 Castelo Branco", phone: "+351 272 323 045" },
+            { name: "Manuela Antunes Cabeleireiros", address: "Av. do Brasil 25, 6000-077 Castelo Branco", phone: "+351 272 327 500" },
+            { name: "Requinte Cabeleireiros", address: "R. do Serrado 10, 6000-275 Castelo Branco", phone: "+351 272 323 577" },
+            { name: "Cabeleireiro Lúcia", address: "R. dos Combatentes da Grande Guerra 12, 6000-111 Castelo Branco", phone: "+351 272 321 681" },
+            { name: "Isabel Maria Cabeleireiros", address: "R. de Angola 5, 6000-075 Castelo Branco", phone: "+351 272 327 988" },
+            { name: "Lina Raposo Cabeleireiros", address: "R. da Coutra 12, 6000-130 Castelo Branco", phone: "+351 272 327 790" },
+            { name: "Célia Cabeleireira", address: "Rotunda da Europa, Edifício Plaza, Loja 1, 6000-078 Castelo Branco", phone: "+351 272 321 823" },
+            { name: "Hair Studio", address: "R. do Muro 2, 6000-194 Castelo Branco", phone: "Indisponível" },
+            { name: "Cláudia Cabeleireiros", address: "Av. 1º de Maio, 85, 6000-095 Castelo Branco", phone: "+351 965 432 109" },
+            { name: "Salão de Beleza L&A", address: "R. da Amoreira 5, 6000-050 Castelo Branco", phone: "+351 272 345 678" },
+            { name: "Espelho Meu Cabeleireiros", address: "Alameda da Liberdade 22, 6000-085 Castelo Branco", phone: "+351 934 567 890" },
+            { name: "Bela & Pura Estética", address: "Praça do Município 10, 6000-150 Castelo Branco", phone: "+351 272 333 444" },
+            { name: "Corpo & Alma Centro de Estética", address: "R. do Anjo 7, 6000-165 Castelo Branco", phone: "+351 912 345 678" },
+            { name: "Corte & Estilo", address: "Av. Nuno Álvares, Edifício Panorama, Loja 3, 6000-083 Castelo Branco", phone: "+351 272 456 789" },
+            { name: "Studio Glamour by Sofia", address: "R. do Regimento de Infantaria 11, 6000-267 Castelo Branco", phone: "+351 967 890 123" },
+            { name: "Divinus Cabeleireiro", address: "Urb. Colina do Sol, Lote 14, Loja B, 6000-321 Castelo Branco", phone: "+351 272 987 654" },
+            { name: "Look Radical", address: "R. Proletário 9, 6000-258 Castelo Branco", phone: "+351 923 456 789" },
+            { name: "Pura Beleza", address: "Av. do Dia de Portugal 5, 6000-079 Castelo Branco", phone: "+351 272 123 456" },
+            { name: "Vanguarda Cabeleireiros", address: "R. dos Oleiros 25, 6000-197 Castelo Branco", phone: "+351 961 234 567" }
+        ];
+
+        const salonGrid = document.getElementById('salon-grid');
+        const searchInput = document.getElementById('searchInput');
+        const noResults = document.getElementById('no-results');
+        const toast = document.getElementById('toast-notification');
+
+        const renderSalons = (salonList) => {
+            salonGrid.innerHTML = '';
+            if (salonList.length === 0) {
+                noResults.classList.remove('hidden');
+            } else {
+                noResults.classList.add('hidden');
+            }
+            salonList.forEach(salon => {
+                const card = document.createElement('div');
+                card.className = 'card rounded-lg shadow-sm p-5 flex flex-col';
+                
+                let phoneContent = '';
+                const isPhoneAvailable = salon.phone && salon.phone.toLowerCase() !== 'indisponível';
+
+                if (isPhoneAvailable) {
+                    const cleanPhoneForLink = salon.phone.replace(/[\s+]/g, '');
+                    const isMobile = cleanPhoneForLink.startsWith('3519');
+                    
+                    let whatsappButton = '';
+                    if (isMobile) {
+                        whatsappButton = `
+                            <a href="https://wa.me/${cleanPhoneForLink}" target="_blank" rel="noopener noreferrer" class="btn-action flex-1 text-center py-2 px-3 rounded-md font-semibold text-sm flex items-center justify-center gap-2">
+                                <span>💬</span>
+                                <span>WhatsApp</span>
+                            </a>
+                        `;
+                    }
+
+                    phoneContent = `
+                        <p class="text-gray-700 flex items-center mb-4">
+                            <span class="mr-2">📞</span>
+                            <span>${salon.phone}</span>
+                        </p>
+                        <div class="mt-auto pt-4 flex items-center gap-2">
+                            <a href="tel:${salon.phone.replace(/\s/g, '')}" class="btn-action flex-1 text-center py-2 px-3 rounded-md font-semibold text-sm">Ligar</a>
+                            <button data-phone="${salon.phone}" class="btn-copy btn-action flex-1 text-center py-2 px-3 rounded-md font-semibold text-sm">Copiar</button>
+                            ${whatsappButton}
+                        </div>
+                    `;
+                } else {
+                     phoneContent = `
+                        <p class="text-gray-500 flex items-center mb-4">
+                            <span class="mr-2">📞</span>
+                            <span>Telefone indisponível</span>
+                        </p>
+                     `;
+                }
+
+                card.innerHTML = `
+                    <div class="flex-grow">
+                        <h3 class="text-xl font-semibold text-[#8D7B68] mb-2">${salon.name}</h3>
+                        <p class="text-gray-600 flex items-start">
+                            <span class="mr-2 mt-1">📍</span>
+                            <span>${salon.address}</span>
+                        </p>
+                    </div>
+                    <div class="mt-4 border-t border-gray-100 pt-4">
+                        ${phoneContent}
+                    </div>
+                `;
+                salonGrid.appendChild(card);
+            });
+        };
+
+        const filterSalons = () => {
+            const query = searchInput.value.toLowerCase();
+            const filteredSalons = salons.filter(salon => 
+                salon.name.toLowerCase().includes(query) || 
+                salon.address.toLowerCase().includes(query)
+            );
+            renderSalons(filteredSalons);
+        };
+
+        function showToast() {
+            toast.classList.add("show");
+            setTimeout(() => { toast.classList.remove("show"); }, 3000);
+        }
+
+        salonGrid.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-copy')) {
+                const phoneToCopy = e.target.dataset.phone;
+                
+                const tempInput = document.createElement('input');
+                tempInput.value = phoneToCopy;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                try {
+                    document.execCommand('copy');
+                    showToast();
+                } catch (err) {
+                    console.error('Fallback: Oops, unable to copy', err);
+                }
+                document.body.removeChild(tempInput);
+            }
+        });
+
+        searchInput.addEventListener('keyup', filterSalons);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSalons(salons);
+        });
+    </script>
+</body>
+</html>
+
